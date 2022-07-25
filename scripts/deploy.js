@@ -14,12 +14,12 @@ async function main() {
   // await hre.run('compile');
 
   // We get the contract to deploy
-  const MGTNFT = await hre.ethers.getContractFactory("MGTNFT");
-  const mgt = await MGTNFT.deploy("MGT","MGT","0xBCcC2073ADfC46421308f62cfD9868dF00D339a8","0xBCcC2073ADfC46421308f62cfD9868dF00D339a8");
+  const BASKETBALLNFT = await hre.ethers.getContractFactory("BASKETBALLNFT");
+  const basketball = await hre.upgrades.deployProxy(BASKETBALLNFT,[]);
 
-  await mgt.deployed();
+  await basketball.deployed();
 
-  console.log("MGTNFT deployed to:", mgt.address);
+  console.log("BASKETBALLNFT deployed to:", basketball.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
