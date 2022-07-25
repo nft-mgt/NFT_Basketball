@@ -13,8 +13,12 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         __Ownable_init();
     }
 
-    function adminMint(uint256 quantity) external payable onlyOwner {
-        _mint(msg.sender, quantity);
+    function adminMint(uint256 quantity, address reciever)
+        external
+        payable
+        onlyOwner
+    {
+        _mint(reciever, quantity);
     }
 
     function setNameSymbol(string calldata name_, string calldata symbol_)
