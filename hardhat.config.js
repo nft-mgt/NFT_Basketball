@@ -38,10 +38,10 @@ module.exports = {
             accounts:
                 process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
         },
-        ropsten: {
-            url: process.env.ROPSTEN_URL || "",
+        goerli: {
+            url: process.env.GOERLI_URL || "",
             accounts:
-                process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+                process.env.PRIVATE_KEY_LAST !== undefined ? [process.env.PRIVATE_KEY_LAST] : [],
         },
         rinkeby: {
             url: process.env.RINKEBY_URL || "",
@@ -66,4 +66,7 @@ module.exports = {
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
     },
+    mocha: {
+        timeout: 100000
+    }
 };

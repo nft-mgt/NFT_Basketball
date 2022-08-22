@@ -15,7 +15,7 @@ async function main() {
 
   // We get the contract to deploy
   const BASKETBALLNFT = await hre.ethers.getContractFactory("BASKETBALLNFT");
-  const basketball = await hre.upgrades.deployProxy(BASKETBALLNFT,[]);
+  const basketball = await hre.upgrades.deployProxy(BASKETBALLNFT, ["Dragramflies Hiroshima", "DFK"]);
 
   await basketball.deployed();
 
