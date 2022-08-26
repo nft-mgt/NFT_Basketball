@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "erc721a-upgradeable/contracts/ERC721AUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ERC721AStorage} from "erc721a-upgradeable/contracts/ERC721AStorage.sol";
 
 contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
     enum SetIndex {
@@ -315,6 +314,8 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         }
     }
 
+    /// @notice Get the properties of the NFT and display it in a human readable form.
+    /// @param tokenID The tokenID of the NFT to be queried.
     function getTokenAttributes(uint256 tokenID)
         public
         view
@@ -335,10 +336,14 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         );
     }
 
+    /// @notice The owner set blindbox baseURI.
     function setBlindBoxURI(string memory _blindBoxBaseURI) public onlyOwner {
         blindBoxBaseURI = _blindBoxBaseURI;
     }
 
+    /// @notice Open blind boxes in batches. Each time it is called, (${id last call}, id] baseURI is set.
+    /// @param id The maximum tokenID currently opened.
+    /// @param baseURI_ The baseURI of the latest set interval.
     function setBaseURI(uint256 id, string memory baseURI_) public onlyOwner {
         if (stageIDs.length != 0) {
             require(
@@ -351,6 +356,7 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         emit BlindBoxOpen(id);
     }
 
+    /// @notice Used to modify the wrong parameters passed in by setBaseURI.
     function changeURI(uint256 id, string memory baseURI_) public onlyOwner {
         require(
             bytes(revealedBaseURI[id]).length != 0,
@@ -360,7 +366,11 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         emit ChangeBaseURI(id);
     }
 
-    // binary search
+    /// @notice Query the URI of NFT metadata, which conforms to the ERC72 protocol.
+    /// @dev Because the baseURI of each interval where the tokenID is located is different, the binary search method is used here to improve the query efficiency.
+    /// @dev Except for 0, tokenIDs are divided in the way of opening and closing before, eg: (x,y].
+    /// @param tokenId The tokenID of the NFT to be queried.
+    /// @return The URI of the NFT to be queried.
     function tokenURI(uint256 tokenId)
         public
         view
@@ -370,6 +380,7 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         require(_exists(tokenId), "token id is not exist.");
         string memory baseURI_;
         uint256 len = stageIDs.length;
+        // binary search
         if (len == 0) {
             baseURI_ = blindBoxBaseURI;
         } else {
