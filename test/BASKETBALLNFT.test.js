@@ -224,9 +224,9 @@ describe("BASKETBALLNFT", async function () {
 		assert.equal(await basketball_nft.ownerOf(30), vaultDrop.address);
 		// What are the properties of the randomly generated NFT?
 		const resultAttr = await basketball_nft.attribute(40);
-		assert.deepEqual(resultAttr, [SetIndex.StarCard, RarityIndex.Rare, resultAttr.player])
+		assert.deepEqual(resultAttr, [SetIndex.StarCard, RarityIndex.Rare, resultAttr.player, SeriesIndex.Gold_Card])
 		// Is the corresponding number reduced?
-		assert.equal(await basketball_nft.cardNumber(resultAttr.player, RarityIndex.Rare, SetIndex.StarCard), 132);
+		assert.equal(await basketball_nft.cardNumber(resultAttr.player, RarityIndex.Rare, SetIndex.StarCard, SeriesIndex.Gold_Card), 132);
 
 		// test sellExchanged
 		await basketball_nft.connect(vault).setApprovalForAll(testsell.address, true);
@@ -312,7 +312,7 @@ describe("BASKETBALLNFT", async function () {
 		assert.equal(g, 133);
 	})
 
-	/* ------------ setNFTNumber ------------ */
+	/* ------------ nft card parameters ------------ */
 
 	it('setNFTNumber test', async () => {
 		let attrs = [[SetIndex.ModelChangeSeries, RarityIndex.Common, 211, SeriesIndex.Gold_Card],
@@ -325,13 +325,21 @@ describe("BASKETBALLNFT", async function () {
 		await assert.revert(basketball_nft.connect(owner).setNFTNumber(attrs, numbersErr), "params length error");
 
 		await basketball_nft.connect(owner).setNFTNumber(attrs, numbers);
-		assert.equal(await basketball_nft.cardNumber(211, RarityIndex.Common, SetIndex.ModelChangeSeries), 30);
+		assert.equal(await basketball_nft.cardNumber(211, RarityIndex.Common, SetIndex.ModelChangeSeries, SeriesIndex.Gold_Card), 30);
 
 		for (let i = 0; i < 201; i++) {
 			attrs.push([SetIndex.ModelChangeSeries, RarityIndex.Common, 211, SeriesIndex.Gold_Card]);
 			numbers.push(i + 1);
 		}
 		await assert.revert(basketball_nft.connect(owner).setNFTNumber(attrs, numbers), "too much params");
+	})
+
+	it('setPlayerList test', async () => {
+		let playerList_ = [210, 212, 213, 214, 215, 217, 2123, 2124, 211, 218, 2110, 2128];
+		await assert.revert(basketball_nft.connect(user1).setPlayerList(playerList_), "Ownable: caller is not the owner");
+
+		await basketball_nft.connect(owner).setPlayerList(playerList_);
+		assert.equal(await basketball_nft.playerList(playerList_.length - 1), playerList_[playerList_.length - 1]);
 	})
 
 	/* ------------ reveal ------------ */
@@ -361,8 +369,8 @@ describe("BASKETBALLNFT", async function () {
 		for (let i = 0; i < tokenIDs.length; i++) {
 			const id = tokenIDs[i];
 			assert.deepEqual(await basketball_nft.attribute(id), attributes[i]);
-			console.log(await basketball_nft.getTokenAttributes(id));
 		}
+		console.log(await basketball_nft.getTokenAttributes(0));
 	})
 
 	it('setBlindBoxURI test', async () => {

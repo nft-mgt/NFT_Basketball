@@ -3,11 +3,8 @@ pragma solidity ^0.8.0;
 
 import "erc721a-upgradeable/contracts/ERC721AUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ERC721AStorage} from "erc721a-upgradeable/contracts/ERC721AStorage.sol";
 
 contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
-    using ERC721AStorage for ERC721AStorage.Layout;
-
     enum SetIndex {
         ModelChangeSeries,
         StarCard
@@ -60,6 +57,7 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         address receiver;
     }
 
+    uint256 public maxSupply;
     // vault
     address public vault;
     address public vaultForDrop;
@@ -76,9 +74,11 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
     string[] public Series;
     uint32[] public Player;
 
+    uint32[] public playerList;
+
     mapping(uint256 => Attributes) public attribute;
-    // player => rarity => set => number
-    mapping(uint32 => mapping(uint8 => mapping(uint8 => uint32)))
+    // player => rarity => set => series => number
+    mapping(uint32 => mapping(uint8 => mapping(uint8 => mapping(uint8 => uint32))))
         public cardNumber;
 
     function initialize(
@@ -90,6 +90,7 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         __ERC721A_init(name, symbol);
         __Ownable_init();
 
+        maxSupply = 10000;
         Set = ["Model Change", "Star Card"];
         Rarity = ["Legendary", "Epic", "Rare", "Common"];
         Series = [
@@ -111,19 +112,24 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
             "Card_Red",
             "Card_White"
         ];
-        Player = [210, 212, 213, 215, 217, 2123, 2124];
+        // 210, 212, 213, 214, 215, 217, 2123, 2124 active players 
+        // 211, 218, 2110, 2128 transfer player (Can only be used for airdrops)
+        Player = [210, 212, 213, 214, 215, 217, 2123, 2124, 211, 218, 2110, 2128];
+        // 214 does not belong to this exchange reserve collection
+        playerList = [210, 212, 213, 215, 217, 2123, 2124];
 
         vault = _vault;
         vaultForDrop = _vaultForDrop;
 
-        for (uint256 i = 0; i < Player.length; i++) {
-            cardNumber[Player[i]][uint8(RarityIndex.Rare)][
+        for (uint256 i = 0; i < playerList.length; i++) {
+            cardNumber[playerList[i]][uint8(RarityIndex.Rare)][
                 uint8(SetIndex.StarCard)
-            ] = 133;
+            ][uint8(SeriesIndex.Gold_Card)] = 133;
         }
     }
 
     event BlindBoxOpen(uint256 tokenId);
+    event ChangeBaseURI(uint256 tokenId);
     event Exchange(
         uint256[] payTokenIDs,
         uint256 payDropTokenID,
@@ -143,7 +149,7 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
     {
         uint256 length = payTokenIDs.length;
         require(length == 3, "param length error");
-        require(Player.length != 0, "has no card");
+        require(playerList.length != 0, "has no card");
         // Transfer Player NFT Verification
         uint32 player = attribute[payDropTokenID].player;
         require(
@@ -173,24 +179,24 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
                 abi.encodePacked(
                     block.timestamp,
                     blockhash(block.number - 1),
-                    block.difficulty,
+                    payDropTokenID,
                     msg.sender
                 )
             )
         );
-        uint256 index = randomNumber % Player.length;
-        uint32 plyer = Player[index];
+        uint256 index = randomNumber % playerList.length;
+        uint32 plyer = playerList[index];
 
         // Determine if the player's backup NFT has been exhausted.
         // The number of players' spare NFTs is reduced by one.
-        cardNumber[plyer][uint8(RarityIndex.Rare)][uint8(SetIndex.StarCard)]--;
+        cardNumber[plyer][uint8(RarityIndex.Rare)][uint8(SetIndex.StarCard)][uint8(SeriesIndex.Gold_Card)]--;
         if (
             cardNumber[plyer][uint8(RarityIndex.Rare)][
                 uint8(SetIndex.StarCard)
-            ] == 0
+            ][uint8(SeriesIndex.Gold_Card)] == 0
         ) {
-            Player[index] = Player[Player.length - 1];
-            Player.pop();
+            playerList[index] = playerList[playerList.length - 1];
+            playerList.pop();
         }
 
         uint256 tokenID = totalSupply();
@@ -256,9 +262,12 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
     /// @param amount The number of NFTs minted.
     /// @param receiver Binance's address for receiving NFTs.
     function mintBatch(uint256 amount, address receiver) public onlyOwner {
+        uint256 firstTokenID = totalSupply();
         _safeMint(receiver, amount);
-        emit MintBatch(totalSupply(), amount, receiver);
+        emit MintBatch(firstTokenID, amount, receiver);
     }
+
+    /* --------------- nft card parameters --------------- */
 
     /// @notice The owner writes the number of NFTs of each player in all subdivision branches.
     /// @dev The length of the two parameters must be the same and cannot exceed 200.
@@ -275,10 +284,17 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
             uint32 player_ = attrs[i].player;
             uint8 rarity_ = attrs[i].rarity;
             uint8 set_ = attrs[i].set;
+            uint8 serie_ = attrs[i].series;
             uint32 number_ = numbers[i];
 
-            cardNumber[player_][rarity_][set_] = number_;
+            cardNumber[player_][rarity_][set_][serie_] = number_;
         }
+    }
+
+    /// @notice The owner reset playerList for new exchange rule.
+    /// @param playerList_ New playerList value.
+    function setPlayerList(uint32[] calldata playerList_) public onlyOwner {
+        playerList = playerList_;
     }
 
     /* --------------- reveal --------------- */
@@ -298,6 +314,8 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         }
     }
 
+    /// @notice Get the properties of the NFT and display it in a human readable form.
+    /// @param tokenID The tokenID of the NFT to be queried.
     function getTokenAttributes(uint256 tokenID)
         public
         view
@@ -309,6 +327,7 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         )
     {
         Attributes memory attr = attribute[tokenID];
+        require(attr.player != 0, "this tokenID has not attribute");
         return (
             Set[attr.set],
             Rarity[attr.rarity],
@@ -317,10 +336,14 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         );
     }
 
+    /// @notice The owner set blindbox baseURI.
     function setBlindBoxURI(string memory _blindBoxBaseURI) public onlyOwner {
         blindBoxBaseURI = _blindBoxBaseURI;
     }
 
+    /// @notice Open blind boxes in batches. Each time it is called, (${id last call}, id] baseURI is set.
+    /// @param id The maximum tokenID currently opened.
+    /// @param baseURI_ The baseURI of the latest set interval.
     function setBaseURI(uint256 id, string memory baseURI_) public onlyOwner {
         if (stageIDs.length != 0) {
             require(
@@ -333,15 +356,21 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         emit BlindBoxOpen(id);
     }
 
+    /// @notice Used to modify the wrong parameters passed in by setBaseURI.
     function changeURI(uint256 id, string memory baseURI_) public onlyOwner {
         require(
             bytes(revealedBaseURI[id]).length != 0,
             "URI corresponding to id should not be empty"
         );
         revealedBaseURI[id] = baseURI_;
+        emit ChangeBaseURI(id);
     }
 
-    // binary search
+    /// @notice Query the URI of NFT metadata, which conforms to the ERC72 protocol.
+    /// @dev Because the baseURI of each interval where the tokenID is located is different, the binary search method is used here to improve the query efficiency.
+    /// @dev Except for 0, tokenIDs are divided in the way of opening and closing before, eg: (x,y].
+    /// @param tokenId The tokenID of the NFT to be queried.
+    /// @return The URI of the NFT to be queried.
     function tokenURI(uint256 tokenId)
         public
         view
@@ -351,6 +380,7 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         require(_exists(tokenId), "token id is not exist.");
         string memory baseURI_;
         uint256 len = stageIDs.length;
+        // binary search
         if (len == 0) {
             baseURI_ = blindBoxBaseURI;
         } else {
@@ -403,13 +433,15 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
                 : string(abi.encodePacked(blindBoxBaseURI, _toString(tokenId)));
     }
 
-    function onERC721Received(
-        address operator,
+    function _beforeTokenTransfers(
         address from,
-        uint256 tokenId,
-        bytes calldata data
-    ) external pure returns (bytes4) {
-        return this.onERC721Received.selector;
+        address to,
+        uint256 startTokenId,
+        uint256 quantity
+    ) internal override {
+        if (from == address(0)) {
+            require(totalSupply() + quantity <= maxSupply, "exceeded maximum supply");
+        }
     }
 
     /* --------------- modifiers --------------- */
