@@ -137,8 +137,9 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         address sender
     );
     event MintBatch(uint256 firstTokenID, uint256 amount, address sender);
+    event Claimed(uint256[] tokenIDs);
 
-    /// @notice The user uses any 3 Star Card Series and common NFTs and 1 transfer player NFT to replace any Rare NFT.
+    /// @notice The user uses any 3 Star Card Set and common NFTs and 1 transfer player NFT to replace any Rare NFT.
     /// @dev A player will be randomly selected from the Player as the NFT player attribute.
     /// @dev If a player's NFT is exhausted, the player will be skipped.
     /// @dev Approve is not required because there is no external call, msg.sender is owner of NFT.
@@ -219,6 +220,13 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
     /// @param dropData Airdrop data.
     function airdropToUser(AirdropUser[] calldata dropData) public onlyOwner {
         require(dropData.length <= 50, "to much drop");
+        uint256 leng;
+        for (uint256 i; i < dropData.length; i++) {
+            leng += dropData[i].tokenIDs.length;
+        }
+        uint256[] memory claimedTokenIDs = new uint256[](leng);
+        uint256 len;
+
         for (uint256 i; i < dropData.length; i++) {
             AirdropUser memory data = dropData[i];
             require(data.attributes.length == data.amount, "param error");
@@ -230,6 +238,8 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
                 );
                 require(!claimed[data.tokenIDs[j]], "tokenID has claimed");
                 claimed[data.tokenIDs[j]] = true;
+                claimedTokenIDs[len] = data.tokenIDs[j];
+                len++;
             }
             uint256 totalSupply_ = totalSupply();
             for (uint256 j; j < data.amount; j++) {
@@ -237,6 +247,7 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
             }
             _safeMint(data.receiver, data.amount);
         }
+        emit Claimed(claimedTokenIDs);
     }
 
     /// @notice The project party subjectively distributes the airdrop to KOL.
@@ -295,6 +306,23 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
     /// @param playerList_ New playerList value.
     function setPlayerList(uint32[] calldata playerList_) public onlyOwner {
         playerList = playerList_;
+    }
+
+    /* --------------- owner config --------------- */
+    function setSet(uint256 index, string memory value) public onlyOwner {
+        Set[index] = value;
+    }
+
+    function setRarity(uint256 index, string memory value) public onlyOwner {
+        Rarity[index] = value;
+    }
+
+    function setSeries(uint256 index, string memory value) public onlyOwner {
+        Series[index] = value;
+    }
+
+    function setPlayer(uint256 index, uint32 value) public onlyOwner {
+        Player[index] = value;
     }
 
     /* --------------- reveal --------------- */

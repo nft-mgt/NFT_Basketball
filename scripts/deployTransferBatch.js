@@ -13,16 +13,13 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  const vaultForExchange = "0x7d2A23ed3583a3AbB6D0CA40843045B5cE9c63A3";
-  const vaultForTransfer = "0xB8f38065272f52d09c4AadeAdA5e941142062Fb1";
-
   // We get the contract to deploy
-  const BASKETBALLNFT = await hre.ethers.getContractFactory("BASKETBALLNFT");
-  const basketball = await hre.upgrades.deployProxy(BASKETBALLNFT, ["Dragramflies Hiroshima", "DFK", vaultForExchange, vaultForTransfer]);
+  const TransferBatchNFT = await hre.ethers.getContractFactory("TransferBatchNFT");
+  const transferBatchNFT = await TransferBatchNFT.deploy()
 
-  await basketball.deployed();
+  await transferBatchNFT.deployed();
 
-  console.log("BASKETBALLNFT deployed to:", basketball.address);
+  console.log("TransferBatchNFT deployed to:", transferBatchNFT.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
