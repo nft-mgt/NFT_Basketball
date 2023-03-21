@@ -72,6 +72,7 @@ describe("BASKETBALLNFT", async function () {
 
 	/* ------------ airdrop ------------ */
 	it('airdropToUser test', async () => {
+		const airdropID = 1;
 		const attributes = [[0, 3, 210, SeriesIndex.Gold_Card], [1, 1, 215, SeriesIndex.Gold_Card], [0, 2, 2124, SeriesIndex.Gold_Card]];
 		const amount = 3;
 		const amountErr = 4;
@@ -84,20 +85,20 @@ describe("BASKETBALLNFT", async function () {
 		await basketball_nft.connect(owner).mintBatch(3, user1.address);
 		await basketball_nft.connect(owner).mintBatch(3, user2.address);
 
-		await assert.revert(basketball_nft.connect(user1).airdropToUser([dropData, dropDataUser2]), "Ownable: caller is not the owner");
+		await assert.revert(basketball_nft.connect(user1).airdropToUser(airdropID, [dropData, dropDataUser2]), "Ownable: caller is not the owner");
 
 		dropData[1] = amountErr;
-		await assert.revert(basketball_nft.connect(owner).airdropToUser([dropData, dropDataUser2]), "param error");
+		await assert.revert(basketball_nft.connect(owner).airdropToUser(airdropID, [dropData, dropDataUser2]), "param error");
 		dropData[1] = amount;
 
 		dropData[2] = [];
-		await assert.revert(basketball_nft.connect(owner).airdropToUser([dropData, dropDataUser2]), "tokenIDs error");
+		await assert.revert(basketball_nft.connect(owner).airdropToUser(airdropID, [dropData, dropDataUser2]), "tokenIDs error");
 
 		dropData[2] = tokenIDsUser2;
-		await assert.revert(basketball_nft.connect(owner).airdropToUser([dropData, dropDataUser2]), "receiver is not owner of the tokenID");
+		await assert.revert(basketball_nft.connect(owner).airdropToUser(airdropID, [dropData, dropDataUser2]), "receiver is not owner of the tokenID");
 		dropData[2] = tokenIDs;
 
-		await basketball_nft.connect(owner).airdropToUser([dropData, dropDataUser2]);
+		await basketball_nft.connect(owner).airdropToUser(airdropID, [dropData, dropDataUser2]);
 		assert.equal(await basketball_nft.balanceOf(user1.address), amount + 3);
 		assert.equal(await basketball_nft.ownerOf(6), user1.address);
 		assert.equal(await basketball_nft.ownerOf(7), user1.address);
@@ -106,7 +107,6 @@ describe("BASKETBALLNFT", async function () {
 		assert.equal(await basketball_nft.ownerOf(9), user2.address);
 		assert.equal(await basketball_nft.ownerOf(10), user2.address);
 		assert.equal(await basketball_nft.ownerOf(11), user2.address);
-		await assert.revert(basketball_nft.connect(owner).airdropToUser([dropData, dropDataUser2]), "tokenID has claimed");
 
 		assert.deepEqual(await basketball_nft.attribute(6), [0, 3, 210]);
 		assert.deepEqual(await basketball_nft.attribute(7), [1, 1, 215]);
@@ -119,7 +119,7 @@ describe("BASKETBALLNFT", async function () {
 		for (let i = 0; i < 51; i++) {
 			dataArr.push(dropData);
 		}
-		await assert.revert(basketball_nft.connect(owner).airdropToUser(dataArr), "to much drop");
+		await assert.revert(basketball_nft.connect(owner).airdropToUser(airdropID, dataArr), "to much drop");
 	})
 
 	it('airdropToKOL test', async () => {
@@ -184,6 +184,10 @@ describe("BASKETBALLNFT", async function () {
 		await basketball_nft.connect(owner).mintBatch(40, user1.address);
 		assert.equal(await basketball_nft.balanceOf(user1.address), 40);
 
+		const amountSwap = 100;
+		await basketball_nft.connect(owner).setSwapLimit(amountSwap, amountSwap);
+		await basketball_nft.connect(owner).setSwapTime(0, 10000000000);
+
 		// attach attributes to NFTs
 		for (let i = 0; i < 40; i++) {
 			if (i < 30) {
@@ -226,7 +230,13 @@ describe("BASKETBALLNFT", async function () {
 		const resultAttr = await basketball_nft.attribute(40);
 		assert.deepEqual(resultAttr, [SetIndex.StarCard, RarityIndex.Rare, resultAttr.player, SeriesIndex.Gold_Card])
 		// Is the corresponding number reduced?
-		assert.equal(await basketball_nft.cardNumber(resultAttr.player, RarityIndex.Rare, SetIndex.StarCard, SeriesIndex.Gold_Card), 132);
+		const SWAP_SERVING = 2124;
+		const SWAP_TRANSFERRED = 2128;
+		if (resultAttr.player == SWAP_SERVING) {
+			assert.equal(await basketball_nft.swapLimit(SWAP_SERVING), amountSwap - 1);
+		} else if (resultAttr.player == SWAP_TRANSFERRED) {
+			assert.equal(await basketball_nft.swapLimit(SWAP_TRANSFERRED), amountSwap - 1);
+		}
 
 		// test sellExchanged
 		await basketball_nft.connect(vault).setApprovalForAll(testsell.address, true);
@@ -237,7 +247,10 @@ describe("BASKETBALLNFT", async function () {
 	})
 
 	it('exchange all NFT test', async () => {
-		// mint exceed all 133 * 7 = 931 , need 3724 common nfts
+		const amountSwap = 100;
+		await basketball_nft.connect(owner).setSwapLimit(amountSwap, amountSwap);
+		await basketball_nft.connect(owner).setSwapTime(0, 10000000000);
+		// mint exceed all 100 * 2 = 200 , need 800 common nfts
 
 		await basketball_nft.connect(owner).mintBatch(4000, user1.address);
 
@@ -266,11 +279,11 @@ describe("BASKETBALLNFT", async function () {
 
 		let resultSet = [];
 		for (let i = 0; i < 1000; i++) {
-			if (i < 931) {
+			if (i < 200) {
 				await basketball_nft.connect(user1).exchange([3 * i, 3 * i + 1, 3 * i + 2], 3000 + i);
 				resultSet.push(await basketball_nft.attribute(4000 + i));
 			} else {
-				await assert.revert(basketball_nft.connect(user1).exchange([3 * i, 3 * i + 1, 3 * i + 2], 3000 + i), 'has no card');
+				await assert.revert(basketball_nft.connect(user1).exchange([3 * i, 3 * i + 1, 3 * i + 2], 3000 + i), 'swap card used out');
 			}
 		}
 		// console.log(resultSet);
@@ -278,22 +291,7 @@ describe("BASKETBALLNFT", async function () {
 		let a = 0; let b = 0; let c = 0; let d = 0; let e = 0; let f = 0; let g = 0;
 		for (let i = 0; i < resultSet.length; i++) {
 			switch (resultSet[i].player) {
-				case 210:
-					a++;
-					break;
-				case 212:
-					b++;
-					break;
-				case 213:
-					c++;
-					break;
-				case 215:
-					d++;
-					break;
-				case 217:
-					e++;
-					break;
-				case 2123:
+				case 2128:
 					f++;
 					break;
 				case 2124:
@@ -303,43 +301,8 @@ describe("BASKETBALLNFT", async function () {
 			}
 
 		}
-		assert.equal(a, 133);
-		assert.equal(b, 133);
-		assert.equal(c, 133);
-		assert.equal(d, 133);
-		assert.equal(e, 133);
-		assert.equal(f, 133);
-		assert.equal(g, 133);
-	})
-
-	/* ------------ nft card parameters ------------ */
-
-	it('setNFTNumber test', async () => {
-		let attrs = [[SetIndex.ModelChangeSeries, RarityIndex.Common, 211, SeriesIndex.Gold_Card],
-		[SetIndex.ModelChangeSeries, RarityIndex.Common, 211, SeriesIndex.Gold_Card],
-		[SetIndex.ModelChangeSeries, RarityIndex.Common, 211, SeriesIndex.Gold_Card]];
-		const numbers = [10, 20, 30];
-		const numbersErr = [10, 20, 30, 40];
-
-		await assert.revert(basketball_nft.connect(user1).setNFTNumber(attrs, numbers), "Ownable: caller is not the owner");
-		await assert.revert(basketball_nft.connect(owner).setNFTNumber(attrs, numbersErr), "params length error");
-
-		await basketball_nft.connect(owner).setNFTNumber(attrs, numbers);
-		assert.equal(await basketball_nft.cardNumber(211, RarityIndex.Common, SetIndex.ModelChangeSeries, SeriesIndex.Gold_Card), 30);
-
-		for (let i = 0; i < 201; i++) {
-			attrs.push([SetIndex.ModelChangeSeries, RarityIndex.Common, 211, SeriesIndex.Gold_Card]);
-			numbers.push(i + 1);
-		}
-		await assert.revert(basketball_nft.connect(owner).setNFTNumber(attrs, numbers), "too much params");
-	})
-
-	it('setPlayerList test', async () => {
-		let playerList_ = [210, 212, 213, 214, 215, 217, 2123, 2124, 211, 218, 2110, 2128];
-		await assert.revert(basketball_nft.connect(user1).setPlayerList(playerList_), "Ownable: caller is not the owner");
-
-		await basketball_nft.connect(owner).setPlayerList(playerList_);
-		assert.equal(await basketball_nft.playerList(playerList_.length - 1), playerList_[playerList_.length - 1]);
+		assert.equal(f, 100);
+		assert.equal(g, 100);
 	})
 
 	/* ------------ reveal ------------ */

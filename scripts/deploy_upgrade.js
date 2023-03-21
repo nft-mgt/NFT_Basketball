@@ -9,7 +9,7 @@ async function main() {
   // await hre.run('compile');
 
   // We get the contract to deploy
-  const addr = "0x07aec8b03f1e0bda03a7e5593b2444104b3e43f0";
+  const addr = "0x93b38db5C4652A23770f2979b0bE03035B8317E2";
   const BASKETBALLNFT = await ethers.getContractFactory("BASKETBALLNFT");
   const bb = await upgrades.upgradeProxy(addr, BASKETBALLNFT);
   console.log("BASKETBALLNFT upgrade to:", bb.address);
