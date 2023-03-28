@@ -156,14 +156,9 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         }
     }
 
-    event BlindBoxOpen(uint256 tokenId);
-    event ChangeBaseURI(uint256 tokenId);
-    event Exchange(
-        uint256[] payTokenIDs,
-        uint256 payDropTokenID,
-        uint256 newTokenID,
-        address sender
-    );
+    event BlindBoxOpen(uint256 tokenId, string baseURI);
+    event ChangeBaseURI(uint256 tokenId, string baseURI);
+    event Exchange(uint256 newTokenID, uint256 player, address sender);
     event MintBatch(uint256 firstTokenID, uint256 amount, address sender);
     event Claimed(uint256 airdropID, uint256[] tokenIDs);
     event Bought(
@@ -262,21 +257,15 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
 
         // mint
         _safeMint(msg.sender, 1);
-        emit Exchange(payTokenIDs, payDropTokenID, tokenID, msg.sender);
+        emit Exchange(tokenID, plyer, msg.sender);
     }
 
-    function setSwapTime(
-        uint128 startTime,
-        uint128 endTime
-    ) public onlyOwner {
+    function setSwapTime(uint128 startTime, uint128 endTime) public onlyOwner {
         swapStartTime = startTime;
         swapEndTime = endTime;
     }
 
-    function setSwapLimit(
-        uint32 transferred,
-        uint32 serving
-    ) public onlyOwner {
+    function setSwapLimit(uint32 transferred, uint32 serving) public onlyOwner {
         swapLimit[SWAP_TRANSFERRED] = transferred;
         swapLimit[SWAP_SERVING] = serving;
     }
@@ -411,17 +400,11 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         Set[index] = value;
     }
 
-    function setRarity(
-        uint256 index,
-        string memory value
-    ) public onlyOwner {
+    function setRarity(uint256 index, string memory value) public onlyOwner {
         Rarity[index] = value;
     }
 
-    function setSeries(
-        uint256 index,
-        string memory value
-    ) public onlyOwner {
+    function setSeries(uint256 index, string memory value) public onlyOwner {
         Series[index] = value;
     }
 
@@ -456,27 +439,18 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         returns (string memory set, string memory rarity, string memory series)
     {
         Attributes memory attr = attribute[tokenID];
-        return (
-            Set[attr.set],
-            Rarity[attr.rarity],
-            Series[attr.series]
-        );
+        return (Set[attr.set], Rarity[attr.rarity], Series[attr.series]);
     }
 
     /// @notice The owner set blindbox baseURI.
-    function setBlindBoxURI(
-        string memory _blindBoxBaseURI
-    ) public onlyOwner {
+    function setBlindBoxURI(string memory _blindBoxBaseURI) public onlyOwner {
         blindBoxBaseURI = _blindBoxBaseURI;
     }
 
     /// @notice Open blind boxes in batches. Each time it is called, (${id last call}, id] baseURI is set.
     /// @param id The maximum tokenID currently opened.
     /// @param baseURI_ The baseURI of the latest set interval.
-    function setBaseURI(
-        uint256 id,
-        string memory baseURI_
-    ) public onlyOwner {
+    function setBaseURI(uint256 id, string memory baseURI_) public onlyOwner {
         if (stageIDs.length != 0) {
             require(
                 stageIDs[stageIDs.length - 1] < id,
@@ -485,20 +459,17 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         }
         stageIDs.push(id);
         revealedBaseURI[id] = baseURI_;
-        emit BlindBoxOpen(id);
+        emit BlindBoxOpen(id, baseURI_);
     }
 
     /// @notice Used to modify the wrong parameters passed in by setBaseURI.
-    function changeURI(
-        uint256 id,
-        string memory baseURI_
-    ) public onlyOwner {
+    function changeURI(uint256 id, string memory baseURI_) public onlyOwner {
         require(
             bytes(revealedBaseURI[id]).length != 0,
             "URI corresponding to id should not be empty"
         );
         revealedBaseURI[id] = baseURI_;
-        emit ChangeBaseURI(id);
+        emit ChangeBaseURI(id, baseURI_);
     }
 
     /// @notice Query the URI of NFT metadata, which conforms to the ERC721 protocol.
