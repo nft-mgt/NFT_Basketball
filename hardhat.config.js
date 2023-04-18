@@ -43,8 +43,8 @@ module.exports = {
             accounts:
                 process.env.PRIVATE_KEY_LAST !== undefined ? [process.env.PRIVATE_KEY_LAST] : [],
         },
-        rinkeby: {
-            url: process.env.RINKEBY_URL || "",
+        sepolia: {
+            url: process.env.SIPOLIA_URL || "",
             accounts:
                 process.env.PRIVATE_KEY_LAST !== undefined ? [process.env.PRIVATE_KEY_LAST] : [],
         },

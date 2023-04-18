@@ -13,8 +13,8 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  const vaultForExchange = "0x7d2A23ed3583a3AbB6D0CA40843045B5cE9c63A3";
-  const vaultForTransfer = "0xB8f38065272f52d09c4AadeAdA5e941142062Fb1";
+  const vaultForExchange = "0xBCcC2073ADfC46421308f62cfD9868dF00D339a8";
+  const vaultForTransfer = "0xBCcC2073ADfC46421308f62cfD9868dF00D339a8";
 
   // We get the contract to deploy
   const BASKETBALLNFT = await hre.ethers.getContractFactory("BASKETBALLNFT");

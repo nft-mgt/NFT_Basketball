@@ -344,15 +344,42 @@ describe("BASKETBALLNFT", async function () {
 	});
 
 	it('setBaseURI test', async () => {
+		/* 
+		1. 
+		*/
+
 		await basketball_nft.connect(owner).mintBatch(300, user2.address);
 
-		const id = 100;
-		const testURI = "http://test.html";
-		await assert.revert(basketball_nft.connect(user1).setBaseURI(id, testURI), "Ownable: caller is not the owner");
-		await basketball_nft.connect(owner).setBaseURI(id, testURI);
-		assert.equal(await basketball_nft.tokenURI(0), testURI + 0);
+		// check owner permission 
+		let id = 100;
+		const testURI0 = "http://test.html";
+		await assert.revert(basketball_nft.connect(user1).setBaseURI(id, testURI0), "Ownable: caller is not the owner");
+		await basketball_nft.connect(owner).setBaseURI(id, testURI0);
+		assert.equal(await basketball_nft.tokenURI(0), testURI0 + 0);
 
-		await assert.revert(basketball_nft.connect(owner).setBaseURI(id - 1, testURI), "id should be self-incrementing");
+		// insert id = 50 < 100
+		id = 50;
+		const testURI1 = "http://test.html1";
+		await basketball_nft.connect(owner).setBaseURI(id, testURI1);
+		assert.equal(await basketball_nft.tokenURI(0), testURI1 + 0);
+		assert.equal(await basketball_nft.tokenURI(51), testURI0 + 51);
+
+		// insert id = 70  > 50 && < 100
+		id = 70;
+		const testURI2 = "http://test.html2";
+		await basketball_nft.connect(owner).setBaseURI(id, testURI2);
+		assert.equal(await basketball_nft.tokenURI(71), testURI0 + 71);
+		assert.equal(await basketball_nft.tokenURI(0), testURI1 + 0);
+		assert.equal(await basketball_nft.tokenURI(51), testURI2 + 51);
+
+		// insert id = 120  > 100
+		id = 120;
+		const testURI3 = "http://test.html3";
+		await basketball_nft.connect(owner).setBaseURI(id, testURI3);
+		assert.equal(await basketball_nft.tokenURI(71), testURI0 + 71);
+		assert.equal(await basketball_nft.tokenURI(0), testURI1 + 0);
+		assert.equal(await basketball_nft.tokenURI(51), testURI2 + 51);
+		assert.equal(await basketball_nft.tokenURI(120), testURI3 + 120);
 	});
 
 	it('changeURI test', async () => {

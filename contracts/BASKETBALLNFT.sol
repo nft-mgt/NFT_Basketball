@@ -451,13 +451,26 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
     /// @param id The maximum tokenID currently opened.
     /// @param baseURI_ The baseURI of the latest set interval.
     function setBaseURI(uint256 id, string memory baseURI_) public onlyOwner {
-        if (stageIDs.length != 0) {
-            require(
-                stageIDs[stageIDs.length - 1] < id,
-                "id should be self-incrementing"
-            );
+        uint256 len = stageIDs.length;
+        if (len == 0) {
+            stageIDs.push(id);
+        } else if (id > stageIDs[len - 1]) {
+            stageIDs.push(id);
+        } else {
+            uint256 i; // index for new id
+            for (i = len - 1; i >= 0; i--) {
+                require(id != stageIDs[i], "same stageID error");
+                if ((i != 0 && id > stageIDs[i - 1]) || i == 0) break;
+            }
+            // push lastest element
+            stageIDs.push(stageIDs[len - 1]);
+            // move other element
+            for (uint256 j = len - 1; j > i; j--) {
+                stageIDs[j] = stageIDs[j - 1];
+            }
+            // insert new element
+            stageIDs[i] = id;
         }
-        stageIDs.push(id);
         revealedBaseURI[id] = baseURI_;
         emit BlindBoxOpen(id, baseURI_);
     }
@@ -550,5 +563,8 @@ contract BASKETBALLNFT is ERC721AUpgradeable, OwnableUpgradeable {
         }
     }
 
+    function setMaxSupply(uint256 maxSupply_) public onlyOwner {
+        maxSupply = maxSupply_;
+    }
     /* --------------- modifiers --------------- */
 }
