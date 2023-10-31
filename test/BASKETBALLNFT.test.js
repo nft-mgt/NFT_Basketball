@@ -1,6 +1,7 @@
 const hre = require("hardhat");
 const { currentTime, getEthBalance, fastForward } = require('./utils')();
 const { assert } = require('./common');
+const { utils, Wallet, BigNumber, toBigNumber } = require("ethers") ;
 
 describe("BASKETBALLNFT", async function () {
 	let basketball_nft, testsell;
@@ -69,6 +70,65 @@ describe("BASKETBALLNFT", async function () {
 		await basketball_nft.connect(owner).mintBatch(100, user2.address);
 		assert.equal(await basketball_nft.balanceOf(user2.address), 100);
 	})
+	/* ------------ buy ------------ */
+	it('setMintParams test', async () => {
+		const startTime = await currentTime();
+		const endTime = startTime + 3600;
+		const timeoutLimit = 600;
+		const price = 1000000;
+		await assert.revert(basketball_nft.connect(user1).setMintParams(
+			startTime,endTime,timeoutLimit,price), "Ownable: caller is not the owner");
+		await basketball_nft.connect(owner).setMintParams(
+			startTime,endTime,timeoutLimit,price);
+		assert.equal(await basketball_nft.saleStartTime(), startTime);
+		assert.equal(await basketball_nft.saleEndTime(), endTime);
+		assert.equal(await basketball_nft.timeoutLimit(), timeoutLimit);
+		assert.equal(await basketball_nft.price(), price);
+	})
+
+	it('buy test', async () => {
+		let startTime = await currentTime();
+		let endTime = startTime + 3600;
+		const timeoutLimit = 600;
+		const price = 1000;
+
+    const salt1 = getSalt(Math.floor(Date.now() / 1000));
+		const attr = [1,1,1,1];
+		await assert.revert(basketball_nft.connect(user1).buy(salt1, attr,{value: 0}), "End of sale");
+		
+		await basketball_nft.connect(owner).setMintParams(endTime, endTime, timeoutLimit, price);
+		await assert.revert(basketball_nft.connect(user1).buy(salt1, attr,{value: 0}), "Not Started");
+
+		await basketball_nft.connect(owner).setMintParams(startTime, endTime, timeoutLimit, price);
+		await fastForward(timeoutLimit + 100);
+		await assert.revert(basketball_nft.connect(user1).buy(salt1, attr,{value: 0}), "Time out");
+
+		startTime = await currentTime();
+		endTime = startTime + 3600;
+		await basketball_nft.connect(owner).setMintParams(startTime, endTime, timeoutLimit, price);
+
+    const salt2 = getSalt(startTime + 100);
+		await assert.revert(basketball_nft.connect(user1).buy(salt2, attr,{value: 0}), "Timestamp exceeds block.timestamp");
+
+		const salt3 = getSalt(startTime);
+		await assert.revert(basketball_nft.connect(user1).buy(salt3, attr,{value: 0}), "Invalid amount");
+
+		await basketball_nft.connect(user1).buy(salt3, attr,{value: utils.parseEther("1")});
+		await assert.revert(basketball_nft.connect(user1).buy(salt3, attr,{value: utils.parseEther("1")}), "Salt has been used");
+
+		// console.log(await basketball_nft.totalSupply());
+	})
+
+	function getSalt(timestamp) {
+		return BigNumber.from(
+			BigNumber.from(timestamp).toHexString() +
+				"xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+					const r = (Math.random() * 16) | 0;
+					const v = c === "x" ? r : (r & 0x3) | 0x8;
+					return v.toString(16);
+				})
+		);
+	}
 
 	/* ------------ airdrop ------------ */
 	it('airdropToUser test', async () => {
